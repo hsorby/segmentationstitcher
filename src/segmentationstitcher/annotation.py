@@ -11,10 +11,18 @@ class AnnotationCategory(Enum):
     """
     How to process segmentations with this annotation.
     """
-    CONNECTED_SIMPLE_NETWORK = 1   # a simple connected network graph
-    CONNECTED_COMPLEX_NETWORK = 2  # a complex network of connected parallel sections e.g. fascicles.
-    UNCONNECTED_GENERAL = 3        # contours and other segmentations which are not connected but are included in output
-    EXCLUDE = 4                    # segmentations to exclude from the output
+    EXCLUDE = 0               # segmentations to exclude from the output
+    GENERAL = 1               # for segmentations which are not connected but are included in output
+    INDEPENDENT_NETWORK = 2   # networks which only connect with the same annotation
+    NETWORK_GROUP_1 = 3       # network group 1, any segmentations with this category may connect
+    NETWORK_GROUP_2 = 4       # network group 2, any segmentations with this category may connect
+
+    def get_group_name(self):
+        """
+        Get name of Zinc group to put all segmentations with this category.
+        :return: String name.
+        """
+        return '.' + self.name
 
 
 class Annotation:
@@ -34,6 +42,7 @@ class Annotation:
         self._term = term
         self._dimension = dimension
         self._category = category
+        self._category_change_callback = None
 
     def decode_settings(self, settings_in: dict):
         """
@@ -69,7 +78,22 @@ class Annotation:
         return self._category
 
     def set_category(self, category):
-        self._category = category
+        old_category = self._category
+        if category != old_category:
+            self._category = category
+            if self._category_change_callback:
+                self._category_change_callback(self, old_category)
+
+    def set_category_change_callback(self, category_change_callback):
+        """
+        Set up client to be informed when annotation category is changed.
+        Typically used to update category groups for user interface.
+        :param category_change_callback: Callable with signature (annotation, old_category)
+        """
+        self._category_change_callback = category_change_callback
+
+    def set_category_by_name(self, category_name):
+        self.set_category(AnnotationCategory[category_name])
 
     def get_dimension(self):
         return self._dimension
@@ -89,19 +113,19 @@ class Annotation:
         self._term = term
 
 
-def region_get_annotations(region, simple_network_keywords, complex_network_keywords, term_keyword="http"):
+def region_get_annotations(region, network_group1_keywords, network_group2_keywords, term_keywords):
     """
     Get annotation group names and terms from region's non-empty groups.
     Groups with names consisting only of numbers are ignored as we're needlessly getting these for part contours.
-    After sorting for simple and complex networks and terms, remaining annotations are marked as general unconnected.
+    After sorting for network groups and terms, remaining annotations are marked as general unconnected.
     :param region: Zinc region to analyse groups in.
-    :param simple_network_keywords: Annotation names containing any of these keywords are marked as simple networks.
-    Must use lower case-folded. Comparison is case-insensitive.
-    :param complex_network_keywords: Annotation names containing any of these keywords are marked as complex networks.
-    Must use lower case-folded. Comparison is case-insensitive.
-    :param term_keyword: Groups with names containing this keyword are matched to other groups with the same content,
-    and supply the term name for them instead of making another Annotation. If no matching group is supplied these
-    are used as names and terms.
+    :param network_group1_keywords: Annotation names with any of these keywords are put in network group 1 category.
+    Must be lower case for comparison.
+    :param network_group2_keywords: Annotation names with any of these keywords are put in network group 2 category.
+    Must use lower case for comparison.
+    :param term_keywords: Annotation names containing any of these keywords are considered ontological term ids. These
+    are matched to other groups with the same content, and supply the term name for them instead of making another
+    Annotation. If no matching group is supplied these are used as names and terms.
     :return: list of Annotation.
     """
     fieldmodule = region.getFieldmodule()
@@ -122,18 +146,24 @@ def region_get_annotations(region, simple_network_keywords, complex_network_keyw
                 continue  # empty group
         if lower_name.isdigit():
             continue  # ignore as these can never be valid annotation names
-        category = AnnotationCategory.UNCONNECTED_GENERAL
-        for keyword in simple_network_keywords:
+        category = AnnotationCategory.GENERAL
+        for keyword in network_group1_keywords:
             if keyword in lower_name:
-                category = AnnotationCategory.CONNECTED_SIMPLE_NETWORK
+                category = AnnotationCategory.NETWORK_GROUP_1
                 break
         else:
-            for keyword in complex_network_keywords:
+            for keyword in network_group2_keywords:
                 if keyword in lower_name:
-                    category = AnnotationCategory.CONNECTED_COMPLEX_NETWORK
+                    category = AnnotationCategory.NETWORK_GROUP_2
                     break
         annotation = Annotation(name, None, dimension, category)
-        if term_keyword in lower_name:
+        is_term = False
+        if category == AnnotationCategory.GENERAL:
+            for keyword in term_keywords:
+                if keyword in lower_name:
+                    is_term = True
+                    break
+        if is_term:
             term_annotations.append(annotation)
         else:
             annotations.append(annotation)

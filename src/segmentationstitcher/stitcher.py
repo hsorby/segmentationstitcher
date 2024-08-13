@@ -1,9 +1,12 @@
 """
 Interface for stitching segmentation data from and calculating transformations between adjacent image blocks.
 """
+from cmlibs.utils.zinc.general import HierarchicalChangeManager
 from cmlibs.zinc.context import Context
 from segmentationstitcher.segment import Segment
 from segmentationstitcher.annotation import region_get_annotations
+
+import copy
 from pathlib import Path
 
 
@@ -12,13 +15,20 @@ class Stitcher:
     Interface for stitching segmentation data from and calculating transformations between adjacent image blocks.
     """
 
-    def __init__(self, segmentation_file_names: list):
+    def __init__(self, segmentation_file_names: list, network_group1_keywords, network_group2_keywords):
         """
         :param segmentation_file_names: List of filenames containing raw segmentations in Zinc format.
+        :param network_group1_keywords: List of keywords. Segmented networks annotated with any of these keywords are
+        initially assigned to network group 1, allowing them to be stitched together.
+        :param network_group2_keywords: List of keywords. Segmented networks annotated with any of these keywords are
+        initially assigned to network group 2, allowing them to be stitched together.
         """
-        self._context = Context("Scaffoldfitter")
+        self._context = Context("Segmentation Stitcher")
         self._root_region = self._context.getDefaultRegion()
         self._annotations = []
+        self._network_group1_keywords = copy.deepcopy(network_group1_keywords)
+        self._network_group2_keywords = copy.deepcopy(network_group2_keywords)
+        self._term_keywords = ['fma:', 'fma_', 'ilx:', 'ilx_', 'uberon:', 'uberon_']
         self._segments = []
         self._version = 1  # increment when new settings added to migrate older serialised settings
         for segmentation_file_name in segmentation_file_names:
@@ -26,8 +36,8 @@ class Stitcher:
             segment = Segment(name, segmentation_file_name, self._root_region)
             self._segments.append(segment)
             segment_annotations = region_get_annotations(
-                segment.get_raw_region(), simple_network_keywords=["vagus", "nerve", "trunk", "branch"],
-                complex_network_keywords=["fascicle"], term_keyword="http")
+                segment.get_raw_region(), self._network_group1_keywords, self._network_group2_keywords,
+                self._term_keywords)
             for segment_annotation in segment_annotations:
                 name = segment_annotation.get_name()
                 term = segment_annotation.get_term()
@@ -42,6 +52,11 @@ class Stitcher:
                     # print("Add annoation name", name, "term", term, "dim", segment_annotation.get_dimension(),
                     #       "category", segment_annotation.get_category())
                     self._annotations.insert(index, segment_annotation)
+        with HierarchicalChangeManager(self._root_region):
+            for segment in self._segments:
+                segment.reset_annotation_category_groups(self._annotations)
+        for annotation in self._annotations:
+            annotation.set_category_change_callback(self._annotation_change)
 
     def decode_settings(self, settings_in: dict):
         """
@@ -97,6 +112,10 @@ class Stitcher:
                 else:
                     print("WARNING: Segmentation Stitcher.  Segment with name", name,
                           "not found in settings; using defaults. Have input files changed?")
+        with HierarchicalChangeManager(self._root_region):
+            for segment in self._segments:
+                segment.reset_annotation_category_groups(self._annotations)
+
 
     def encode_settings(self) -> dict:
         """
@@ -109,10 +128,31 @@ class Stitcher:
         }
         return settings
 
+    def _annotation_change(self, annotation, old_category):
+        """
+        Callback from annotation that its category has changed.
+        Update segment category groups.
+        :param annotation: Annotation that has changed category.
+        :param old_category: The old category to remove segmentations with annotation from.
+        """
+        with HierarchicalChangeManager(self._root_region):
+            for segment in self._segments:
+                segment.update_annotation_category(annotation, old_category)
+
     def get_annotations(self):
         return self._annotations
+
+    def get_context(self):
+        return self._context
+
+    def get_root_region(self):
+        return self._root_region
+
     def get_segments(self):
         return self._segments
 
     def get_version(self):
         return self._version
+
+    def write_output_segmentation_file(self, file_name):
+        pass

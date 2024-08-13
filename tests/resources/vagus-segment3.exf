@@ -351,6 +351,7 @@ Node: 68
  -4.359756419261278e-01
  -5.458579284260732e-01
   1.000000000000000e-02
+!#nodeset datapoints
 Define node template: node2
 Shape. Dimension=0
 #Fields=3
@@ -667,7 +668,7 @@ Node group:
 Element group:
 1..9
 Group name: marker
-!#nodeset nodes
+!#nodeset datapoints
 Node group:
 69..70
 Group name: unknown

@@ -1,7 +1,11 @@
 """
 A segment of the segmentation data, generally from a separate image block.
 """
+from cmlibs.utils.zinc.group import group_add_group_local_contents, group_remove_group_local_contents
+from cmlibs.utils.zinc.general import ChangeManager
+from cmlibs.zinc.field import Field
 from cmlibs.zinc.result import RESULT_OK
+from segmentationstitcher.annotation import AnnotationCategory
 
 
 class Segment:
@@ -27,6 +31,14 @@ class Segment:
         result = self._raw_region.readFile(segmentation_file_name)
         assert result == RESULT_OK, \
             "Could not read segmentation file " + segmentation_file_name
+        # ensure category groups exist:
+        fieldmodule = self._raw_region.getFieldmodule()
+        with ChangeManager(fieldmodule):
+            for category in AnnotationCategory:
+                group_name = category.get_group_name()
+                group = fieldmodule.createFieldGroup()
+                group.setName(group_name)
+                group.setManaged(True)
         self._rotation = [0.0, 0.0, 0.0]
         self._translation = [0.0, 0.0, 0.0]
 
@@ -61,6 +73,30 @@ class Segment:
         """
         return self._base_region
 
+    def get_annotation_group(self, annotation):
+        """
+        Get Zinc group containing segmentations for the supplied annotation
+        :param annotation: An Annotation object.
+        :return: Zinc FieldGroup in the segment's raw region, or None if not present in segment.
+        """
+        fieldmodule = self._raw_region.getFieldmodule()
+        annotation_group = fieldmodule.findFieldByName(annotation.get_name()).castGroup()
+        if annotation_group.isValid():
+            return annotation_group
+        return None
+
+    def get_category_group(self, category):
+        """
+        Get Zinc group in which segmentations with the supplied annotation category are maintained
+        for visualisation.
+        :param category: The AnnotationCategory to query.
+        :return: Zinc FieldGroup in the segment's raw region.
+        """
+        fieldmodule = self._raw_region.getFieldmodule()
+        group_name = category.get_group_name()
+        group = fieldmodule.findFieldByName(group_name).castGroup()
+        return group
+
     def get_name(self):
         return self._name
 
@@ -84,3 +120,41 @@ class Segment:
     def set_translation(self, translation):
         assert len(translation) == 3
         self._translation = translation
+
+    def update_annotation_category(self, annotation, old_category=AnnotationCategory.EXCLUDE):
+        """
+        Ensures special groups representing annotion categories contain via addition or removal the
+        correct contents for this annotation.
+        :param annotation: The annotation to update category group for. Ensures its local contents
+        (elements, nodes, datapoints) are in its category group.
+        :param old_category: The old category for this annotation, i.e. category group to remove from.
+        """
+        new_category = annotation.get_category()
+        if new_category == old_category:
+            return
+        annotation_group = self.get_annotation_group(annotation)
+        if not annotation_group:
+            return  # not present in this segment
+        fieldmodule = self._raw_region.getFieldmodule()
+        with ChangeManager(fieldmodule):
+            old_category_group = self.get_category_group(old_category)
+            group_remove_group_local_contents(old_category_group, annotation_group)
+            new_category_group = self.get_category_group(new_category)
+            group_add_group_local_contents(new_category_group, annotation_group)
+
+    def reset_annotation_category_groups(self, annotations):
+        """
+        Rebuild all annotation category groups e.g. after loading settings.
+        :param annotations: List of all annotations from stitcher.
+        """
+        fieldmodule = self._raw_region.getFieldmodule()
+        with ChangeManager(fieldmodule):
+            # clear all category groups
+            for category in AnnotationCategory:
+                category_group = self.get_category_group(category)
+                category_group.clear()
+            for annotation in annotations:
+                annotation_group = self.get_annotation_group(annotation)
+                if annotation_group:
+                    category_group = self.get_category_group(annotation.get_category())
+                    group_add_group_local_contents(category_group, annotation_group)
