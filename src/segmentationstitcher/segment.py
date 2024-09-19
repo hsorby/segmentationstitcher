@@ -20,7 +20,7 @@ class Segment:
         :param root_region: Zinc root region to create segment region under.
         """
         self._name = name
-        self._segmentationFileName = segmentation_file_name
+        self._segmentation_file_name = segmentation_file_name
         # print("Create segment", self._name)
         self._base_region = root_region.createChild(self._name)
         assert self._base_region.isValid(), \

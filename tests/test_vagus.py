@@ -50,6 +50,10 @@ class StitchVagusTestCase(unittest.TestCase):
         self.assertEqual("unknown", annotation17.get_name())
         self.assertEqual(AnnotationCategory.GENERAL, annotation17.get_category())
 
+        connection = stitcher1.create_connection([segments1[0], segments1[1]])
+        connections = stitcher1.get_connections()
+        self.assertEqual(1, len(connections))
+
         # test changing category and that category groups are updated
         segment13 = segments1[2]
         mesh1d = segment13.get_raw_region().getFieldmodule().findMeshByDimension(1)

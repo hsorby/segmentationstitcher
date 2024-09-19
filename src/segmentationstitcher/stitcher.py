@@ -3,6 +3,7 @@ Interface for stitching segmentation data from and calculating transformations b
 """
 from cmlibs.utils.zinc.general import HierarchicalChangeManager
 from cmlibs.zinc.context import Context
+from segmentationstitcher.connection import Connection
 from segmentationstitcher.segment import Segment
 from segmentationstitcher.annotation import region_get_annotations
 
@@ -30,6 +31,7 @@ class Stitcher:
         self._network_group2_keywords = copy.deepcopy(network_group2_keywords)
         self._term_keywords = ['fma:', 'fma_', 'ilx:', 'ilx_', 'uberon:', 'uberon_']
         self._segments = []
+        self._connections = []
         self._version = 1  # increment when new settings added to migrate older serialised settings
         for segmentation_file_name in segmentation_file_names:
             name = Path(segmentation_file_name).stem
@@ -116,6 +118,22 @@ class Stitcher:
             for segment in self._segments:
                 segment.reset_annotation_category_groups(self._annotations)
 
+        # create connections from stitcher settings' connection serialisations
+        assert len(self._connections) == 0, "Cannot decode connections after any exist"
+        for connection_settings in settings_in["connections"]:
+            connection_segments = []
+            for segment_name in connection_settings["segments"]:
+                for segment in self._segments:
+                    if segment.get_name() == segment_name:
+                        connection_segments.append(segment)
+                        break
+                else:
+                    print("WARNING: Segmentation Stitcher.  Segment with name", segment_name,
+                          "in connection settings not found; ignoring. Have input files changed?")
+            if len(connection_segments) >= 2:
+                connection = self.create_connection(connection_segments)
+                connection.decode_settings(connection_settings)
+
 
     def encode_settings(self) -> dict:
         """
@@ -123,6 +141,7 @@ class Stitcher:
         """
         settings = {
             "annotations": [annotation.encode_settings() for annotation in self._annotations],
+            "connections": [connection.encode_settings() for connection in self._connections],
             "segments": [segment.encode_settings() for segment in self._segments],
             "version": self._version
         }
@@ -141,6 +160,28 @@ class Stitcher:
 
     def get_annotations(self):
         return self._annotations
+
+    def create_connection(self, segments):
+        """
+        :param segments: List of 2 Stitcher Segment objects to connect.
+        :return: Connection object or None if invalid segments or connection between segments already exists
+        """
+        if len(segments) != 2:
+            print("Only supports connections between 2 segments")
+            return None
+        for connection in self._connections:
+            if all(segment in connection.get_segments() for segment in segments):
+                print("Stitcher.create_connection:  Already have a connection between segments")
+                return None
+        connection = Connection(segments, self._root_region)
+        self._connections.append(connection)
+        return connection
+
+    def get_connections(self):
+        return self._connections
+
+    def remove_connection(self, connection):
+        self._connections.remove(connection)
 
     def get_context(self):
         return self._context
