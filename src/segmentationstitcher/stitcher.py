@@ -33,9 +33,11 @@ class Stitcher:
         self._segments = []
         self._connections = []
         self._version = 1  # increment when new settings added to migrate older serialised settings
+        max_range_reciprocal_sum = 0.0
         for segmentation_file_name in segmentation_file_names:
             name = Path(segmentation_file_name).stem
             segment = Segment(name, segmentation_file_name, self._root_region)
+            max_range_reciprocal_sum += 1.0 / segment.get_max_range()
             self._segments.append(segment)
             segment_annotations = region_get_annotations(
                 segment.get_raw_region(), self._network_group1_keywords, self._network_group2_keywords,
@@ -54,6 +56,11 @@ class Stitcher:
                     # print("Add annoation name", name, "term", term, "dim", segment_annotation.get_dimension(),
                     #       "category", segment_annotation.get_category())
                     self._annotations.insert(index, segment_annotation)
+        if self._segments:
+            # ask segments to track end distances using a global mean max_distance
+            max_distance = 0.25 * len(self._segments) / max_range_reciprocal_sum
+            for segment in self._segments:
+                segment.create_end_point_directions(max_distance)
         with HierarchicalChangeManager(self._root_region):
             for segment in self._segments:
                 segment.reset_annotation_category_groups(self._annotations)
@@ -68,10 +75,12 @@ class Stitcher:
         assert settings_in.get("annotations") and settings_in.get("segments") and settings_in.get("version"), \
             "Stitcher.decode_settings: Invalid settings dictionary"
         # settings_version = settings_in["version"]
+        settings = self.encode_settings()
+        settings.update(settings_in)
 
         # update annotations and warn about differences
         processed_count = 0
-        for annotation_settings in settings_in["annotations"]:
+        for annotation_settings in settings["annotations"]:
             name = annotation_settings["name"]
             term = annotation_settings["term"]
             for annotation in self._annotations:
@@ -86,7 +95,7 @@ class Stitcher:
             for annotation in self._annotations:
                 name = annotation.get_name()
                 term = annotation.get_term()
-                for annotation_settings in settings_in["annotations"]:
+                for annotation_settings in settings["annotations"]:
                     if (annotation_settings["name"] == name) and (annotation_settings["term"] == term):
                         break
                 else:
@@ -95,7 +104,7 @@ class Stitcher:
 
         # update segment settings and warn about differences
         processed_count = 0
-        for segment_settings in settings_in["segments"]:
+        for segment_settings in settings["segments"]:
             name = segment_settings["name"]
             for segment in self._segments:
                 if segment.get_name() == name:
@@ -108,7 +117,7 @@ class Stitcher:
         if processed_count != len(self._segments):
             for segment in self._segments:
                 name = segment.get_name()
-                for segment_settings in settings_in["segments"]:
+                for segment_settings in settings["segments"]:
                     if segment_settings["name"] == name:
                         break
                 else:
@@ -120,7 +129,7 @@ class Stitcher:
 
         # create connections from stitcher settings' connection serialisations
         assert len(self._connections) == 0, "Cannot decode connections after any exist"
-        for connection_settings in settings_in["connections"]:
+        for connection_settings in settings["connections"]:
             connection_segments = []
             for segment_name in connection_settings["segments"]:
                 for segment in self._segments:
