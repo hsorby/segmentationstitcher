@@ -186,6 +186,13 @@ class Stitcher:
         self._connections.append(connection)
         return connection
 
+    def delete_connection(self, connection):
+        """
+        Delete the connection from the stitcher's list.
+        :param connection: Connection to delete.
+        """
+        self._connections.remove(connection)
+
     def get_connections(self):
         return self._connections
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools-git-versioning]
 enabled = true
 [project]
-name = "segmentation_stitcher"
+name = "segmentationstitcher"
 dynamic = ["version"]
 keywords = ["Medical", "Image", "Segmentation", "Merge", "SPARC"]
 readme = "README.md"
