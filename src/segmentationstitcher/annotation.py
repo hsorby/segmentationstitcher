@@ -24,6 +24,9 @@ class AnnotationCategory(Enum):
         """
         return '.' + self.name
 
+    def is_connectable(self):
+        return self in (self.INDEPENDENT_NETWORK, self.NETWORK_GROUP_1, self.NETWORK_GROUP_2)
+
 
 class Annotation:
     """

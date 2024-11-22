@@ -56,16 +56,15 @@ class Stitcher:
                     # print("Add annoation name", name, "term", term, "dim", segment_annotation.get_dimension(),
                     #       "category", segment_annotation.get_category())
                     self._annotations.insert(index, segment_annotation)
+        self._max_distance = 0.0
         if self._segments:
-            # ask segments to track end distances using a global mean max_distance
-            max_distance = 0.25 * len(self._segments) / max_range_reciprocal_sum
-            for segment in self._segments:
-                segment.create_end_point_directions(max_distance)
-        with HierarchicalChangeManager(self._root_region):
-            for segment in self._segments:
-                segment.reset_annotation_category_groups(self._annotations)
+            with HierarchicalChangeManager(self._root_region):
+                self._max_distance = 0.25 * len(self._segments) / max_range_reciprocal_sum
+                for segment in self._segments:
+                    segment.create_end_point_directions(self._annotations, self._max_distance)
+                    segment.update_annotation_category_groups(self._annotations)
         for annotation in self._annotations:
-            annotation.set_category_change_callback(self._annotation_change)
+            annotation.set_category_change_callback(self._annotation_category_change)
 
     def decode_settings(self, settings_in: dict):
         """
@@ -123,9 +122,6 @@ class Stitcher:
                 else:
                     print("WARNING: Segmentation Stitcher.  Segment with name", name,
                           "not found in settings; using defaults. Have input files changed?")
-        with HierarchicalChangeManager(self._root_region):
-            for segment in self._segments:
-                segment.reset_annotation_category_groups(self._annotations)
 
         # create connections from stitcher settings' connection serialisations
         assert len(self._connections) == 0, "Cannot decode connections after any exist"
@@ -140,9 +136,13 @@ class Stitcher:
                     print("WARNING: Segmentation Stitcher.  Segment with name", segment_name,
                           "in connection settings not found; ignoring. Have input files changed?")
             if len(connection_segments) >= 2:
-                connection = self.create_connection(connection_segments)
-                connection.decode_settings(connection_settings)
+                connection = self.create_connection(connection_segments, connection_settings)
 
+        with HierarchicalChangeManager(self._root_region):
+            for segment in self._segments:
+                segment.update_annotation_category_groups(self._annotations)
+            for connection in self._connections:
+                connection.update_annotation_category_groups(self._annotations)
 
     def encode_settings(self) -> dict:
         """
@@ -156,7 +156,7 @@ class Stitcher:
         }
         return settings
 
-    def _annotation_change(self, annotation, old_category):
+    def _annotation_category_change(self, annotation, old_category):
         """
         Callback from annotation that its category has changed.
         Update segment category groups.
@@ -166,24 +166,34 @@ class Stitcher:
         with HierarchicalChangeManager(self._root_region):
             for segment in self._segments:
                 segment.update_annotation_category(annotation, old_category)
+            for connection in self._connections:
+                connection.build_links(self._max_distance)
+                connection.update_annotation_category_groups(self._annotations)
 
     def get_annotations(self):
         return self._annotations
 
-    def create_connection(self, segments):
+    def create_connection(self, segments, connection_settings={}):
         """
         :param segments: List of 2 Stitcher Segment objects to connect.
+        :param connection_settings: Optional serialisation of connection to read before building links.
         :return: Connection object or None if invalid segments or connection between segments already exists
         """
         if len(segments) != 2:
-            print("Only supports connections between 2 segments")
+            print("Segmentation Stitcher: Only supports connections between 2 segments")
+            return None
+        if segments[0] == segments[1]:
+            print("Segmentation Stitcher: Can't make a connection between a segment and itself")
             return None
         for connection in self._connections:
             if all(segment in connection.get_segments() for segment in segments):
-                print("Stitcher.create_connection:  Already have a connection between segments")
+                print("Segmentation Stitcher: Already have a connection between segments")
                 return None
-        connection = Connection(segments, self._root_region)
+        connection = Connection(segments, self._root_region, self._annotations, self._max_distance)
+        if connection_settings:
+            connection.decode_settings(connection_settings)
         self._connections.append(connection)
+        connection.build_links()
         return connection
 
     def delete_connection(self, connection):
@@ -191,6 +201,7 @@ class Stitcher:
         Delete the connection from the stitcher's list.
         :param connection: Connection to delete.
         """
+        connection.detach()
         self._connections.remove(connection)
 
     def get_connections(self):

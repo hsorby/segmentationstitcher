@@ -49,8 +49,7 @@ class Segment:
                 group.setManaged(True)
         self._rotation = [0.0, 0.0, 0.0]
         self._translation = [0.0, 0.0, 0.0]
-        self._group_element_node_ids = {}
-        self._group_node_element_ids = {}
+        self._transformation_change_callbacks = []
         self._raw_fieldcache = self._raw_fieldmodule.createFieldcache()
         self._raw_coordinates = self._raw_fieldmodule.findFieldByName("coordinates").castFiniteElement()
         self._raw_radius = self._raw_fieldmodule.findFieldByName("radius").castFiniteElement()
@@ -66,9 +65,8 @@ class Segment:
         self._working_best_fit_line_orientation = find_or_create_field_finite_element(
             self._working_fieldmodule, "best_fit_line_orientation", 9)
         self._element_node_ids, self._node_element_ids = self._get_element_node_maps()
-        self._raw_groups = get_group_list(self._raw_fieldmodule)
-        self._raw_mesh_groups = [group.getMeshGroup(self._raw_mesh1d) for group in self._raw_groups]
         self._end_node_ids = self._get_end_node_ids()
+        self._end_point_data = {}  # dict node_id -> (coordinates, direction, radius, annotation)
 
     def decode_settings(self, settings_in: dict):
         """
@@ -130,25 +128,33 @@ class Segment:
                 end_node_ids.append(node_id)
         return end_node_ids
 
-    def _element_id_to_group(self, element_id):
+    def _element_id_to_group(self, element_id, annotations):
         """
-        Get the first (should be only) Zinc Group containing raw element of supplied identifier.
+        Get the first Annotation zinc Group containing raw element of supplied identifier.
         :param node_id: Identifier of [end] node to query.
+        :param annotations: Global list of all annotations.
         :return: Zinc Group, MeshGroup or None, None if not found.
         """
         element = self._raw_mesh1d.findElementByIdentifier(element_id)
-        for i, mesh_group in enumerate(self._raw_mesh_groups):
-            if mesh_group.containsElement(element):
-                return self._raw_groups[i], mesh_group
+        for annotation in annotations:
+            group = self._raw_fieldmodule.findFieldByName(annotation.get_name()).castGroup()
+            if group.isValid():
+                mesh_group = group.getMeshGroup(self._raw_mesh1d)
+                if mesh_group.isValid() and mesh_group.containsElement(element):
+                    return group, mesh_group
         return None, None
 
-    def _track_segment(self, start_node_id, start_element_id, max_distance=None):
+    def _track_segment(self, start_node_id, start_element_id,
+                       max_length=None, min_element_count=None, min_aspect_ratio=None):
         """
         Get coordinates and radii along segment from start_node_id in start_element_id, proceeding
         first to other local node in element, until junction, end point or max_distance is tracked.
+        Can finish earlier if min_element_count, min_aspect_ratio reached, but both must be reached if both in use.
         :param start_node_id: First node in path.
         :param start_element_id: Element containing start_node_id and another node to be added.
-        :param max_distance: Maximum distance to track to from first node coordinates, or None for no limit.
+        :param max_length: Maximum length to track from first node coordinates, or None for no limit.
+        :param min_element_count: Minimum number of elements to track, or None to not test.
+        :param min_aspect_ratio: Minimum ratio of length / mean radius to end tracking, or None to not test.
         :return: coordinates list, radius list, node id list, endElementId
         """
         self._element_node_ids, self._node_element_ids
@@ -158,24 +164,39 @@ class Segment:
         path_radii = []
         path_node_ids = []
         lastNode = False
+        sum_r = 0.0
         while True:
+            if node_id in path_node_ids:
+                print("Segmentation Stitcher.  Tracking found a loop. Stopping.")
+                break
             node = self._raw_nodes.findNodeByIdentifier(node_id)
             self._raw_fieldcache.setNode(node)
             result, x = self._raw_coordinates.evaluateReal(self._raw_fieldcache, 3)
             if result != RESULT_OK:
-                continue
+                break
             path_node_ids.append(node_id)
             path_coordinates.append(x)
             result, r = self._raw_radius.evaluateReal(self._raw_fieldcache, 1)
             if result != RESULT_OK:
                 r = 1.0
             path_radii.append(r)
+            sum_r += r
             if lastNode:
                 break
-            if (len(path_coordinates) > 1) and (max_distance is not None):
-                distance = magnitude(sub(x, path_coordinates[0]))
-                if distance > max_distance:
+            point_count = len(path_coordinates)
+            if point_count > 1:
+                length = magnitude(sub(x, path_coordinates[0]))
+                if (max_length is not None) and (length > max_length):
                     break
+                if (min_element_count is not None) or (min_aspect_ratio is not None):
+                    if (min_element_count is None) or (point_count > min_element_count):
+                        if min_aspect_ratio is None:
+                            break
+                        mean_r = sum_r / point_count
+                        if mean_r > 0.0:
+                            aspect_ratio = length / mean_r
+                            if aspect_ratio >= min_aspect_ratio:
+                                break
             node_ids = self._element_node_ids[element_id]
             node_id = node_ids[1] if (node_ids[0] == node_id) else node_ids[0]
             element_ids = self._node_element_ids[node_id]
@@ -183,20 +204,21 @@ class Segment:
                 lastNode = True
                 continue
             element_id = element_ids[1] if (element_ids[0] == element_id) else element_ids[0]
+
         return path_coordinates, path_radii, path_node_ids, element_id
 
-    def _track_path(self, end_node_id, max_distance=None):
+    def _track_path(self, end_node_id, annotations, max_length=None):
         """
         Get coordinates and radii along path from end_node_id, continuing along
         branches if in similar direction.
-        :param group_name: Group to use node-element maps for.
         :param end_node_id: End node identifier to track from. Must be in only one element.
-        :param max_distance: Maximum distance to track to, or None for no limit.
-        :return: coordinates list, radius list, path node ids, start_x, end_x, mean_r
+        :param annotations: Global list of all annotations.
+        :param max_length: Maximum length to track along, or None for no limit.
+        :return: coordinates list, radius list, path node ids, path group, start_x, end_x, mean_r
         """
         element_ids = self._node_element_ids[end_node_id]
         assert len(element_ids) == 1
-        path_group = self._element_id_to_group(element_ids[0])[0]
+        path_group = self._element_id_to_group(element_ids[0], annotations)[0]
         path_coordinates = []
         path_radii = []
         path_node_ids = []
@@ -206,29 +228,38 @@ class Segment:
         start_x = None
         end_x = None
         mean_r = None
-        remaining_max_distance = max_distance
         last_direction = None
-        while (not path_coordinates) or (len(element_ids) > 2):
+        length = 0.0
+        element_count = 0
+        min_element_count = 10
+        aspect_ratio = 0.0
+        min_aspect_ratio = 4.0
+        while (((not path_coordinates) or (len(element_ids) > 2)) and (length < max_length) and
+               ((element_count < min_element_count) or (aspect_ratio < min_aspect_ratio))):
             add_path_coordinates = None
             add_path_radii = None
             add_path_node_ids = None
             add_path_error = None
+            add_path_length = 0.0
             add_element_id = None
             for element_id in element_ids:
                 if element_id == stop_element_id:
                     continue
-                segment_group = self._element_id_to_group(element_id)[0]
+                segment_group = self._element_id_to_group(element_id, annotations)[0]
                 if path_group and (segment_group != path_group):
                     continue
-                segment_coordinates, segment_radii, segment_node_ids, segment_stop_element_id =\
-                    self._track_segment(stop_node_id, element_id, remaining_max_distance)
+                segment_coordinates, segment_radii, segment_node_ids, segment_stop_element_id = self._track_segment(
+                    stop_node_id, element_id,
+                    max_length=max_length - length,
+                    min_element_count=min_element_count - element_count,
+                    min_aspect_ratio=min_aspect_ratio - aspect_ratio)
                 segment_stop_node_id = segment_node_ids[-1]
                 if segment_stop_node_id in path_node_ids:
                     continue  # avoid loops
                 if last_direction:
-                    add_start_x, add_end_x, add_mean_r = fit_line(trial_coordinates, trial_radii)[0:3]
-                    add_direction = sub(add_end_x, add_start_x)
-                    if dot(normalize(last_direction), normalize(add_direction)) < 0.8:
+                    add_start_x, add_end_x, add_mean_r = fit_line(segment_coordinates, segment_radii)[0:3]
+                    add_direction = normalize(sub(add_end_x, add_start_x))
+                    if dot(last_direction, add_direction) < 0.8:  # arbitrary factor
                         continue  # avoid sudden changes in direction
                 add_segment_coordinates = segment_coordinates if not path_coordinates else segment_coordinates[1:]
                 add_segment_radii = segment_radii if not path_radii else segment_radii[1:]
@@ -238,8 +269,8 @@ class Segment:
                 trial_radii = path_radii + add_segment_radii
                 trial_start_x, trial_end_x, trial_mean_r, trial_mean_projection_error =\
                     fit_line(trial_coordinates, trial_radii)
-                radius_difference = math.fabs(add_segment_mean_r - path_mean_r) if (path_mean_r is not None) else 0.0
-                trial_error = trial_mean_projection_error + radius_difference
+                delta_radius = math.fabs(add_segment_mean_r - path_mean_r) if (path_mean_r is not None) else 0.0
+                trial_error = trial_mean_projection_error + 4.0 * (delta_radius * delta_radius)  # arbitrary factor
                 if (add_element_id is None) or (trial_error < add_path_error):
                     add_path_coordinates = add_segment_coordinates
                     add_path_radii = add_segment_radii
@@ -247,6 +278,8 @@ class Segment:
                     add_path_error = trial_error
                     add_node_id = segment_stop_node_id
                     add_element_id = segment_stop_element_id
+                    add_path_length = magnitude(sub(segment_coordinates[-1], segment_coordinates[0]))
+                    add_path_mean_r = add_segment_mean_r
                     start_x, end_x, mean_r = trial_start_x, trial_end_x, trial_mean_r
             if not add_path_coordinates:
                 break
@@ -256,31 +289,46 @@ class Segment:
             path_mean_r = sum(path_radii) / len(path_radii)
             stop_node_id = add_node_id
             stop_element_id = add_element_id
-            if max_distance:
-                remaining_max_distance = max_distance - magnitude(sub(path_coordinates[-1], path_coordinates[0]))
             element_ids = self._node_element_ids[stop_node_id]
-            last_direction = sub(end_x, start_x)
+            last_direction = normalize(sub(end_x, start_x))
+
+            element_count += len(path_coordinates) - 1
+            length += add_path_length
+            if add_path_mean_r > 0.0:
+                aspect_ratio += add_path_length / add_path_mean_r
         # 2nd iteration of fit line removes outliers:
         start_x, end_x, mean_r = fit_line(path_coordinates, path_radii, start_x, end_x, 0.5)[0:3]
-        return path_coordinates, path_radii, path_node_ids, start_x, end_x, mean_r
+        return path_coordinates, path_radii, path_node_ids, path_group, start_x, end_x, mean_r
 
-    def create_end_point_directions(self, max_distance):
+    def create_end_point_directions(self, annotations, max_distance):
         """
         Track mean directions of network end points and create working objects for visualisation.
-        :param max_distance: Maximum length to track back from end point.
+        :param annotations: Global list of all annotations.
+        :param max_distance: Maximum length to track back from end point. Stored for link tolerance.
         """
         nodetemplate = self._working_datapoints.createNodetemplate()
         nodetemplate.defineField(self._working_coordinates)
         nodetemplate.defineField(self._working_radius_direction)
         nodetemplate.defineField(self._working_best_fit_line_orientation)
         fieldcache = self._working_fieldmodule.createFieldcache()
+        self._end_point_data = {}
         for end_node_id in self._end_node_ids:
-            path_coordinates, path_radii, path_node_ids, start_x, end_x, mean_r =(
-                self._track_path(end_node_id, max_distance))
+            path_coordinates, path_radii, path_node_ids, path_group, start_x, end_x, mean_r =(
+                self._track_path(end_node_id, annotations, max_distance))
             # Future: want to extend length to be equivalent to path_coordinates
+            direction = sub(start_x, end_x)
+            annotation = None
+            annotation_group_name = path_group.getName() if path_group else None
+            if annotation_group_name:
+                for tmp_annotation in annotations:
+                    if tmp_annotation.get_name() == annotation_group_name:
+                        annotation = tmp_annotation
+                        break
+            self._end_point_data[end_node_id] = (start_x, normalize(direction), mean_r, annotation)
+            # set up visualization objects:
             node = self._working_datapoints.createNode(-1, nodetemplate)
             fieldcache.setNode(node)
-            radius_direction = set_magnitude(sub(start_x, end_x), mean_r)
+            radius_direction = set_magnitude(direction, mean_r)
             self._working_coordinates.setNodeParameters(fieldcache, -1, Node.VALUE_LABEL_VALUE, 1, start_x)
             self._working_radius_direction.setNodeParameters(fieldcache, -1, Node.VALUE_LABEL_VALUE, 1,
                                                              radius_direction)
@@ -293,6 +341,12 @@ class Segment:
             self._working_best_fit_line_orientation.setNodeParameters(fieldcache, -1, Node.VALUE_LABEL_VALUE, 1,
                                                                       direction1 + direction2 + direction3)
 
+    def get_end_point_data(self):
+        """
+        :return: dict node_id -> (coordinates, direction, radius, annotation)
+        """
+        return self._end_point_data
+
     def get_base_region(self):
         """
         Get the base region for all segmentation and working data for this segment.
@@ -302,7 +356,7 @@ class Segment:
 
     def get_annotation_group(self, annotation):
         """
-        Get Zinc group containing segmentations for the supplied annotation
+        Get Zinc group containing segmentations for the supplied annotation.
         :param annotation: An Annotation object.
         :return: Zinc FieldGroup in the segment's raw region, or None if not present in segment.
         """
@@ -347,19 +401,55 @@ class Segment:
         """
         return self._raw_region
 
+    def add_transformation_change_callback(self, transformation_change_callback):
+        """
+        Set up client to be informed when segment transformation is changed.
+        Typically used to update connections.
+        :param transformation_change_callback: Callable with signature (segment)
+        """
+        self._transformation_change_callbacks.append(transformation_change_callback)
+
+    def remove_transformation_change_callback(self, transformation_change_callback):
+        """
+        Remove transformation change callback set previously.
+        :param transformation_change_callback: Callable to remove
+        """
+        self._transformation_change_callbacks.remove(transformation_change_callback)
+
+    def _transformation_change(self):
+        """
+        Inform clients of transformation change.
+        """
+        for transformation_change_callback in self._transformation_change_callbacks:
+            transformation_change_callback(self)
+
     def get_rotation(self):
         return self._rotation
 
-    def set_rotation(self, rotation):
+    def set_rotation(self, rotation, notify=True):
+        """
+        Set segment rotation, which applies before translation.
+        :param rotation: Rotation as list of 3 Euler angles in degrees.
+        :param notify: Set to False to avoid notification to clients if setting translation afterwards.
+        """
         assert len(rotation) == 3
         self._rotation = rotation
+        if notify:
+            self._transformation_change()
 
     def get_translation(self):
         return self._translation
 
-    def set_translation(self, translation):
+    def set_translation(self, translation, notify=True):
+        """
+        Set segment transformation, which applies after rotation.
+        :param translation: New translation.
+        :param notify: Set to False to avoid notification to clients if setting rotation afterwards.
+        """
         assert len(translation) == 3
         self._translation = translation
+        if notify:
+            self._transformation_change()
 
     def get_working_region(self):
         """
@@ -389,7 +479,7 @@ class Segment:
             new_category_group = self.get_category_group(new_category)
             group_add_group_local_contents(new_category_group, annotation_group)
 
-    def reset_annotation_category_groups(self, annotations):
+    def update_annotation_category_groups(self, annotations):
         """
         Rebuild all annotation category groups e.g. after loading settings.
         :param annotations: List of all annotations from stitcher.
