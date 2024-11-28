@@ -259,7 +259,7 @@ class Segment:
                 if last_direction:
                     add_start_x, add_end_x, add_mean_r = fit_line(segment_coordinates, segment_radii)[0:3]
                     add_direction = normalize(sub(add_end_x, add_start_x))
-                    if dot(last_direction, add_direction) < 0.8:  # arbitrary factor
+                    if dot(last_direction, add_direction) < 0.5:  # arbitrary factor
                         continue  # avoid sudden changes in direction
                 add_segment_coordinates = segment_coordinates if not path_coordinates else segment_coordinates[1:]
                 add_segment_radii = segment_radii if not path_radii else segment_radii[1:]
@@ -506,7 +506,7 @@ def fit_line(path_coordinates, path_radii, x1=None, x2=None, filter_proportion=0
     :param x2: Initial end point for line. Default is last point coordinates.
     :param filter_proportion: Proportion of data points to eliminate in order of
     greatest projection normal to line. Default is no filtering.
-    :return: start_x, end_x, mean_r (of unfiltered points), mean_projection_error (of all points)
+    :return: start_x, end_x, harmonic mean_r (of all points), mean_projection_error (of all points)
     """
     assert len(path_coordinates) > 1
     if len(path_coordinates) == 2:
@@ -551,10 +551,11 @@ def fit_line(path_coordinates, path_radii, x1=None, x2=None, filter_proportion=0
             if len(filter_indexes) < filter_count:
                 filter_indexes.append(d)
     mean_projection_error = sum_projection_error / points_count
-    sum_r = 0.0
+    sum_1__r = 0.0
     a = [[0.0, 0.0], [0.0, 0.0]]  # matrix
     b = [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]  # RHS for each component
     for d in range(points_count):
+        sum_1__r += 1.0 / path_radii[d]
         if d in filter_indexes:
             continue
         xi = path_xi[d]
@@ -567,8 +568,7 @@ def fit_line(path_coordinates, path_radii, x1=None, x2=None, filter_proportion=0
         for c in range(3):
             b[c][0] += phi1 * path_coordinates[d][c]
             b[c][1] += phi2 * path_coordinates[d][c]
-        sum_r += path_radii[d]
-    mean_r = sum_r / (points_count - filter_count)
+    mean_r = points_count / sum_1__r
     # invert matrix:
     det_a = a[0][0] * a[1][1] - a[0][1] * a[1][0]
     a_inv = [[a[1][1] / det_a, -a[0][1] / det_a], [-a[1][0] / det_a, a[0][0] / det_a]]

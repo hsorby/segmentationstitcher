@@ -296,9 +296,9 @@ class Connection:
 
         initial_parameters = rotation + translation
         initial_score = links_objective(initial_parameters, ())
-        TOL = initial_score * 1.0E-4
+        # TOL = initial_score * 1.0E-6
         # method='Nelder-Mead'
-        res = minimize(links_objective, initial_parameters, method='Powell', tol=TOL)
+        res = minimize(links_objective, initial_parameters, method='Powell')  # , tol=TOL)
         if not res.success:
             print("Segmentation Stitcher.  Could not optimise final rotation and translation")
             return
@@ -350,6 +350,7 @@ class Connection:
             category0 = annotation0.get_category()
             best_index1 = None
             lowest_score = 0.0
+            weight = None
             for index1, end_point_data1 in enumerate(sorted_end_point_data1):
                 node_id1, coordinates1, direction1, radius1, annotation1 = end_point_data1
                 category1 = annotation1.get_category()
@@ -357,7 +358,7 @@ class Connection:
                         (category0 == AnnotationCategory.INDEPENDENT_NETWORK) and (annotation0 != annotation1)):
                     continue  # end points are not allowed to join
                 direction_score = math.fabs(1.0 + dot(direction0, direction1))
-                if direction_score > 0.5:
+                if direction_score > 0.5:  # arbitrary factor
                     continue  # end points are not pointing towards each other
                 delta_coordinates = sub(coordinates1, coordinates0)
                 mag_delta_coordinates = magnitude(delta_coordinates)
@@ -365,9 +366,9 @@ class Connection:
                 ndistance = math.sqrt(mag_delta_coordinates * mag_delta_coordinates - tdistance * tdistance)
                 if mag_delta_coordinates > (0.5 * self._max_distance):
                      continue  # point is too far away
-                distance_score = ((tdistance * tdistance + 50.0 * ndistance * ndistance) /
+                distance_score = ((tdistance * tdistance + 100.0 * ndistance * ndistance) /
                                   (self._max_distance * self._max_distance))
-                tfactor = math.exp(-100.0 * tdistance / self._max_distance) + 1.0  # arbitrary factor
+                tfactor = math.exp(-1000.0 * tdistance / self._max_distance) + 1.0  # arbitrary factor
                 penetration_distance_score = ((tfactor * tdistance * tdistance) /
                                               (self._max_distance * self._max_distance))
                 delta_radius = (radius0 - radius1) / self._max_distance  # GRC temporary - use a different scale
@@ -375,10 +376,11 @@ class Connection:
                 score = radius0 * (10.0 * direction_score + distance_score + radius_score)
                 if (best_index1 is None) or (score < lowest_score):
                     best_index1 = index1
+                    weight = 0.5 * (annotation0.get_align_weight() + annotation1.get_align_weight())
                     lowest_score = score + penetration_distance_score
             if best_index1 is not None:
                 # if category0 != AnnotationCategory.NETWORK_GROUP_1:
-                total_score += lowest_score
+                total_score += weight * lowest_score
                 node_id1, coordinates1, direction1, radius1, annotation1 = sorted_end_point_data1[best_index1]
                 self.add_linked_nodes(annotation1, node_id0, node_id1)
                 remaining_radius = math.sqrt(math.fabs(radius0 * radius0 - radius1 * radius1))

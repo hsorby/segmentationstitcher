@@ -45,6 +45,7 @@ class Annotation:
         self._term = term
         self._dimension = dimension
         self._category = category
+        self._align_weight = 1.0
         self._category_change_callback = None
 
     def decode_settings(self, settings_in: dict):
@@ -62,6 +63,7 @@ class Annotation:
         # update current settings to gain new ones and override old ones
         settings = self.encode_settings()
         settings.update(settings_in)
+        self._align_weight = settings["align weight"]
         self._category = AnnotationCategory[settings["category"]]
 
     def encode_settings(self) -> dict:
@@ -70,12 +72,20 @@ class Annotation:
         :return: Settings in a dict ready for passing to json.dump.
         """
         settings = {
+            "align weight": self._align_weight,
             "category": self._category.name,
             "dimension": self._dimension,
             "name": self._name,
             "term": self._term
         }
         return settings
+
+    def get_align_weight(self):
+        return self._align_weight
+
+    def set_align_weight(self, align_weight):
+        if align_weight >= 0.0:
+            self._align_weight = align_weight
 
     def get_category(self):
         return self._category
