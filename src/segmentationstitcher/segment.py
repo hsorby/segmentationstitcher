@@ -554,8 +554,12 @@ def fit_line(path_coordinates, path_radii, x1=None, x2=None, filter_proportion=0
     sum_1__r = 0.0
     a = [[0.0, 0.0], [0.0, 0.0]]  # matrix
     b = [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]  # RHS for each component
+    point_radius_count = 0
     for d in range(points_count):
-        sum_1__r += 1.0 / path_radii[d]
+        r = path_radii[d]
+        if r > 0.0:
+            sum_1__r += 1.0 / r
+            point_radius_count += 1
         if d in filter_indexes:
             continue
         xi = path_xi[d]
@@ -568,7 +572,7 @@ def fit_line(path_coordinates, path_radii, x1=None, x2=None, filter_proportion=0
         for c in range(3):
             b[c][0] += phi1 * path_coordinates[d][c]
             b[c][1] += phi2 * path_coordinates[d][c]
-    mean_r = points_count / sum_1__r
+    mean_r = (point_radius_count / sum_1__r) if point_radius_count else 0.0
     # invert matrix:
     det_a = a[0][0] * a[1][1] - a[0][1] * a[1][0]
     a_inv = [[a[1][1] / det_a, -a[0][1] / det_a], [-a[1][0] / det_a, a[0][0] / det_a]]
