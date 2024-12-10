@@ -143,6 +143,12 @@ class Connection:
             self._linked_nodes[annotation_name] = annotation_linked_nodes = []
         annotation_linked_nodes.append([node_id0, node_id1])
 
+    def get_linked_nodes(self):
+        """
+        :return: Map annotation name -> list of paired nodes from segment1 and segment2
+        """
+        return self._linked_nodes
+
     def optimise_transformation(self):
         """
         Optimise transformation of second segment to align with position and direction of nearest points between
@@ -206,7 +212,7 @@ class Connection:
                 _, transformed_coordinates, coordinates, direction, radius, annotation = data
                 if distance < nearby_distance:
                     distance = nearby_distance
-                weight = radius / (distance * distance)
+                weight = annotation.get_align_weight() * radius * radius / (distance * distance)
                 sum_coordinates = add(sum_coordinates, mult(coordinates, weight))
                 sum_direction = add(sum_direction, mult(direction, weight))
                 total_weight += weight
@@ -227,11 +233,11 @@ class Connection:
 
         # optimise transformation of second segment so mean coordinates and directions coincide
 
-        def rotation_objective(rotation, *args):
+        def rotation_objective(trial_rotation, *args):
             target_direction, source_direction, target_side_direction, source_side_direction = args
-            rotation_matrix = euler_to_rotation_matrix(rotation)
-            trans_direction = matrix_vector_mult(rotation_matrix, source_direction)
-            trans_side_direction = matrix_vector_mult(rotation_matrix, source_side_direction)
+            trial_rotation_matrix = euler_to_rotation_matrix(trial_rotation)
+            trans_direction = matrix_vector_mult(trial_rotation_matrix, source_direction)
+            trans_side_direction = matrix_vector_mult(trial_rotation_matrix, source_side_direction)
             return dot(trans_direction, target_direction) + dot(target_side_direction, trans_side_direction)
 
         # note the result is dependent on the initial position, but final optimisation should reduced effect

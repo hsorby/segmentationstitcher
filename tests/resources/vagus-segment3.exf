@@ -355,27 +355,27 @@ Node: 68
 Define node template: node2
 Shape. Dimension=0
 #Fields=3
-1) marker coordinates, coordinate, rectangular cartesian, real, #Components=3
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
  x. #Values=1 (value)
  y. #Values=1 (value)
  z. #Values=1 (value)
-2) marker_location, field, element_xi, #Components=1, host mesh=mesh1d, host mesh dimension=1
+2) marker_name, field, string, #Components=1
  1. #Values=1 (value)
-3) marker_name, field, string, #Components=1
+3) radius, field, rectangular cartesian, real, #Components=1
  1. #Values=1 (value)
 Node template: node2
 Node: 69
   3.000000000000000e+00
   0.000000000000000e+00
   7.000000000000000e-01
- 58  8.299280188212664e-01
  orientation
+ 0.01
 Node: 70
   1.599724956533351e+00
   3.788960603141545e-03
   4.423695723249146e-03
- 4  6.144349999999998e-01
  "landmark 2"
+ 0.01
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Define element template: element1
 Shape. Dimension=1, line

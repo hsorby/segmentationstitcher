@@ -385,21 +385,21 @@ Node: 74
 Define node template: node2
 Shape. Dimension=0
 #Fields=3
-1) marker coordinates, coordinate, rectangular cartesian, real, #Components=3
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
  x. #Values=1 (value)
  y. #Values=1 (value)
  z. #Values=1 (value)
-2) marker_location, field, element_xi, #Components=1, host mesh=mesh1d, host mesh dimension=1
+2) marker_name, field, string, #Components=1
  1. #Values=1 (value)
-3) marker_name, field, string, #Components=1
+3) radius, field, rectangular cartesian, real, #Components=1
  1. #Values=1 (value)
 Node template: node2
 Node: 75
   2.398918879869167e+00
  -1.432597145502751e-01
   2.241355737421549e-01
- 55  6.000000000000000e-01
  orientation
+ 0.01
 !#mesh mesh1d, dimension=1, nodeset=nodes
 Define element template: element1
 Shape. Dimension=1, line
