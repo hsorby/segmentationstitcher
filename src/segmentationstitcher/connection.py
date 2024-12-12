@@ -360,8 +360,8 @@ class Connection:
             for index1, end_point_data1 in enumerate(sorted_end_point_data1):
                 node_id1, coordinates1, direction1, radius1, annotation1 = end_point_data1
                 category1 = annotation1.get_category()
-                if (category0 != category1) or (
-                        (category0 == AnnotationCategory.INDEPENDENT_NETWORK) and (annotation0 != annotation1)):
+                # inter-segment links are only to the same annotation; links within category will be done separately
+                if annotation0 != annotation1:
                     continue  # end points are not allowed to join
                 direction_score = math.fabs(1.0 + dot(direction0, direction1))
                 if direction_score > 0.5:  # arbitrary factor
