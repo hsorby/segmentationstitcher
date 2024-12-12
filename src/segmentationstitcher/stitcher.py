@@ -70,10 +70,11 @@ class Stitcher:
                     # print("Add annoation name", name, "term", term, "dim", segment_annotation.get_dimension(),
                     #       "category", segment_annotation.get_category())
                     self._annotations.insert(index, segment_annotation)
-        # by default put all annotations without terms into the EXCLUDE category
+        # by default put all GENERAL annotations without terms into the EXCLUDE category, except "marker"
         for annotation in self._annotations:
-            if not annotation.get_term():
-                # print("Exclude annotation", annotation.get_name(),"with no term")
+            if ((annotation.get_category() == AnnotationCategory.GENERAL) and (not annotation.get_term()) and
+                    (annotation.get_name() != "marker")):
+                # print("Exclude general annotation", annotation.get_name(), "with no term")
                 annotation.set_category(AnnotationCategory.EXCLUDE)
         self._max_distance = 0.0
         if self._segments:
@@ -241,7 +242,7 @@ class Stitcher:
     def get_version(self):
         return self._version
 
-    def _stitch(self, region):
+    def stitch(self, region):
         """
         :param region: Target region to stitch segmentations into.
         """
@@ -332,7 +333,7 @@ class Stitcher:
                     processed_segments.append(segment)
 
     def write_output_segmentation_file(self, file_name):
-        self._stitch(self._stitch_region)
+        self.stitch(self._stitch_region)
         self._stitch_region.writeFile(file_name)
 
 
