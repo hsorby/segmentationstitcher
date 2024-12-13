@@ -214,6 +214,7 @@ class Stitcher:
             connection.decode_settings(connection_settings)
         self._connections.append(connection)
         connection.build_links()
+        connection.update_annotation_category_groups(self._annotations)
         return connection
 
     def delete_connection(self, connection):
