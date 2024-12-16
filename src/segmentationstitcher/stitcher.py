@@ -41,50 +41,51 @@ class Stitcher:
         self._term_keywords = ['fma:', 'fma_', 'ilx:', 'ilx_', 'uberon:', 'uberon_']
         self._segments = []
         self._connections = []
-        self._version = 1  # increment when new settings added to migrate older serialised settings
-        max_range_reciprocal_sum = 0.0
-        for segmentation_file_name in segmentation_file_names:
-            name = Path(segmentation_file_name).name
-            segment = Segment(name, segmentation_file_name, self._root_region)
-            max_range_reciprocal_sum += 1.0 / segment.get_max_range()
-            self._segments.append(segment)
-            segment_annotations = region_get_annotations(
-                segment.get_raw_region(), self._network_group1_keywords, self._network_group2_keywords,
-                self._term_keywords)
-            for segment_annotation in segment_annotations:
-                name = segment_annotation.get_name()
-                term = segment_annotation.get_term()
-                index = 0
-                for annotation in self._annotations:
-                    if annotation.get_name() == name:
-                        existing_term = annotation.get_term()
-                        if term != existing_term:
-                            print("Warning: Found existing annotation with name", name,
-                                  "but existing term", existing_term, "does not equal new term", term)
-                            if term and (existing_term is None):
-                                annotation.set_term(term)
-                        break  # exists already
-                    if name > annotation.get_name():
-                        index += 1
-                else:
-                    # print("Add annoation name", name, "term", term, "dim", segment_annotation.get_dimension(),
-                    #       "category", segment_annotation.get_category())
-                    self._annotations.insert(index, segment_annotation)
-        # by default put all GENERAL annotations without terms into the EXCLUDE category, except "marker"
-        for annotation in self._annotations:
-            if ((annotation.get_category() == AnnotationCategory.GENERAL) and (not annotation.get_term()) and
-                    (annotation.get_name() != "marker")):
-                # print("Exclude general annotation", annotation.get_name(), "with no term")
-                annotation.set_category(AnnotationCategory.EXCLUDE)
         self._max_distance = 0.0
-        if self._segments:
-            with HierarchicalChangeManager(self._root_region):
-                self._max_distance = 0.25 * len(self._segments) / max_range_reciprocal_sum
-                for segment in self._segments:
-                    segment.create_end_point_directions(self._annotations, self._max_distance)
-                    segment.update_annotation_category_groups(self._annotations)
-        for annotation in self._annotations:
-            annotation.set_category_change_callback(self._annotation_category_change)
+        self._version = 1  # increment when new settings added to migrate older serialised settings
+        with HierarchicalChangeManager(self._root_region):
+            max_range_reciprocal_sum = 0.0
+            for segmentation_file_name in segmentation_file_names:
+                name = Path(segmentation_file_name).name
+                segment = Segment(name, segmentation_file_name, self._root_region)
+                max_range_reciprocal_sum += 1.0 / segment.get_max_range()
+                self._segments.append(segment)
+                segment_annotations = region_get_annotations(
+                    segment.get_raw_region(), self._network_group1_keywords, self._network_group2_keywords,
+                    self._term_keywords)
+                for segment_annotation in segment_annotations:
+                    name = segment_annotation.get_name()
+                    term = segment_annotation.get_term()
+                    index = 0
+                    for annotation in self._annotations:
+                        if annotation.get_name() == name:
+                            existing_term = annotation.get_term()
+                            if term != existing_term:
+                                print("Warning: Found existing annotation with name", name,
+                                      "but existing term", existing_term, "does not equal new term", term)
+                                if term and (existing_term is None):
+                                    annotation.set_term(term)
+                            break  # exists already
+                        if name > annotation.get_name():
+                            index += 1
+                    else:
+                        # print("Add annoation name", name, "term", term, "dim", segment_annotation.get_dimension(),
+                        #       "category", segment_annotation.get_category())
+                        self._annotations.insert(index, segment_annotation)
+            # by default put all GENERAL annotations without terms into the EXCLUDE category, except "marker"
+            for annotation in self._annotations:
+                if ((annotation.get_category() == AnnotationCategory.GENERAL) and (not annotation.get_term()) and
+                        (annotation.get_name() != "marker")):
+                    # print("Exclude general annotation", annotation.get_name(), "with no term")
+                    annotation.set_category(AnnotationCategory.EXCLUDE)
+            if self._segments:
+                with HierarchicalChangeManager(self._root_region):
+                    self._max_distance = 0.25 * len(self._segments) / max_range_reciprocal_sum
+                    for segment in self._segments:
+                        segment.create_end_point_directions(self._annotations, self._max_distance)
+                        segment.update_annotation_category_groups(self._annotations)
+            for annotation in self._annotations:
+                annotation.set_category_change_callback(self._annotation_category_change)
 
     def decode_settings(self, settings_in: dict):
         """

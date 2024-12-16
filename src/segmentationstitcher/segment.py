@@ -5,7 +5,7 @@ from builtins import enumerate
 
 from cmlibs.maths.vectorops import cross, dot, magnitude, matrix_mult, mult, normalize, set_magnitude, sub
 from cmlibs.utils.zinc.field import (
-    get_group_list, find_or_create_field_coordinates, find_or_create_field_finite_element)
+    get_group_list, find_or_create_field_coordinates, find_or_create_field_finite_element, find_or_create_field_group)
 from cmlibs.utils.zinc.finiteelement import evaluate_field_nodeset_range
 from cmlibs.utils.zinc.group import group_add_group_local_contents, group_remove_group_local_contents
 from cmlibs.utils.zinc.general import ChangeManager
@@ -58,12 +58,14 @@ class Segment:
         self._raw_minimums, self._raw_maximums = evaluate_field_nodeset_range(self._raw_coordinates, self._raw_nodes)
         self._working_region = self._base_region.createChild("working")
         self._working_fieldmodule = self._working_region.getFieldmodule()
-        self._working_datapoints = self._working_fieldmodule.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_DATAPOINTS)
-        self._working_coordinates = find_or_create_field_coordinates(self._working_fieldmodule)
-        self._working_radius_direction = find_or_create_field_finite_element(
-            self._working_fieldmodule, "radius_direction", 3)
-        self._working_best_fit_line_orientation = find_or_create_field_finite_element(
-            self._working_fieldmodule, "best_fit_line_orientation", 9)
+        with ChangeManager(self._working_fieldmodule):
+            self._working_datapoints = self._working_fieldmodule.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_DATAPOINTS)
+            self._working_coordinates = find_or_create_field_coordinates(self._working_fieldmodule)
+            self._working_radius_direction = find_or_create_field_finite_element(
+                self._working_fieldmodule, "radius_direction", 3)
+            self._working_best_fit_line_orientation = find_or_create_field_finite_element(
+                self._working_fieldmodule, "best_fit_line_orientation", 9)
+            self._working_end_group = find_or_create_field_group(self._working_fieldmodule, "active_ends")
         self._element_node_ids, self._node_element_ids = self._get_element_node_maps()
         self._end_node_ids = self._get_end_node_ids()
         self._end_point_data = {}  # dict node_id -> (coordinates, direction, radius, annotation)
@@ -325,8 +327,8 @@ class Segment:
                         annotation = tmp_annotation
                         break
             self._end_point_data[end_node_id] = (start_x, normalize(direction), mean_r, annotation)
-            # set up visualization objects:
-            node = self._working_datapoints.createNode(-1, nodetemplate)
+            # set up visualization objects. End direction datapoints have same identifiers as raw end nodes
+            node = self._working_datapoints.createNode(end_node_id, nodetemplate)
             fieldcache.setNode(node)
             radius_direction = set_magnitude(direction, mean_r)
             self._working_coordinates.setNodeParameters(fieldcache, -1, Node.VALUE_LABEL_VALUE, 1, start_x)
@@ -458,6 +460,13 @@ class Segment:
         """
         return self._working_region
 
+    def get_working_end_group(self):
+        """
+        Get group from working region containing connectable end points in segment.
+        :return: Zinc group containing connectable end points.
+        """
+        return self._working_end_group
+
     def update_annotation_category(self, annotation, old_category=AnnotationCategory.EXCLUDE):
         """
         Ensures special groups representing annotion categories contain via addition or removal the
@@ -478,14 +487,14 @@ class Segment:
             group_remove_group_local_contents(old_category_group, annotation_group)
             new_category_group = self.get_category_group(new_category)
             group_add_group_local_contents(new_category_group, annotation_group)
+        self._update_working_end_group()
 
     def update_annotation_category_groups(self, annotations):
         """
         Rebuild all annotation category groups e.g. after loading settings.
         :param annotations: List of all annotations from stitcher.
         """
-        fieldmodule = self._raw_region.getFieldmodule()
-        with ChangeManager(fieldmodule):
+        with ChangeManager(self._raw_fieldmodule):
             # clear all category groups
             for category in AnnotationCategory:
                 category_group = self.get_category_group(category)
@@ -495,7 +504,34 @@ class Segment:
                 if annotation_group:
                     category_group = self.get_category_group(annotation.get_category())
                     group_add_group_local_contents(category_group, annotation_group)
+            self._update_working_end_group()
 
+    def _update_working_end_group(self):
+        """
+        Ensure working end group contains all connectable end points.
+        """
+        connectable_node_groups = []
+        for category in AnnotationCategory:
+            if category.is_connectable():
+                category_group = self.get_category_group(category)
+                node_group = category_group.getNodesetGroup(self._raw_nodes)
+                if node_group.isValid() and (node_group.getSize() > 0):
+                    connectable_node_groups.append(node_group)
+        with ChangeManager(self._working_fieldmodule):
+            self._working_end_group.clear()
+            working_datapoints = \
+                self._working_fieldmodule.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_DATAPOINTS)
+            working_node_group = self._working_end_group.getOrCreateNodesetGroup(working_datapoints)
+            working_nodeiterator = working_datapoints.createNodeiterator()
+            working_node = working_nodeiterator.next()
+            while working_node.isValid():
+                node_identifier = working_node.getIdentifier()
+                raw_node = self._raw_nodes.findNodeByIdentifier(node_identifier)
+                for node_group in connectable_node_groups:
+                    if node_group.containsNode(raw_node):
+                        working_node_group.addNode(working_node)
+                        break;
+                working_node = working_nodeiterator.next()
 
 def fit_line(path_coordinates, path_radii, x1=None, x2=None, filter_proportion=0.0):
     """
