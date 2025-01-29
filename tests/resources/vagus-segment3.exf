@@ -1,0 +1,680 @@
+EX Version: 3
+Region: /
+!#nodeset nodes
+Define node template: node1
+Shape. Dimension=0
+#Fields=2
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
+ x. #Values=1 (value)
+ y. #Values=1 (value)
+ z. #Values=1 (value)
+2) radius, field, rectangular cartesian, real, #Components=1
+ 1. #Values=1 (value)
+Node template: node1
+Node: 1
+  1.942913940852241e-03
+ -6.174096706026299e-03
+ -4.184117075191224e-02
+  5.000000000000000e-01
+Node: 2
+  4.448264093299951e-01
+  8.950283861785819e-04
+  8.513537594775918e-03
+  5.000000000000000e-01
+Node: 3
+  9.144594663866782e-01
+ -7.856525010683454e-03
+  5.230329122004440e-03
+  5.000000000000000e-01
+Node: 4
+  1.341529169159712e+00
+ -3.379731197072129e-03
+  4.432846503988402e-03
+  5.000000000000000e-01
+Node: 5
+  1.761745770384641e+00
+  8.287396815189014e-03
+  4.417953503525773e-03
+  5.000000000000000e-01
+Node: 6
+  2.213753789766584e+00
+  3.492142347275788e-03
+ -4.580284671442248e-03
+  5.000000000000000e-01
+Node: 7
+  2.662473125636201e+00
+  2.017812954482604e-03
+ -1.525185733770927e-05
+  5.000000000000000e-01
+Node: 8
+  3.105347103809529e+00
+  8.648228296777416e-03
+ -4.870345987352635e-04
+  5.000000000000000e-01
+Node: 9
+  3.541403559171137e+00
+  2.293381052435084e-02
+  4.003380068629582e-03
+  5.000000000000000e-01
+Node: 10
+  3.982089419158738e+00
+  1.827226733944906e-02
+ -8.564516602682279e-02
+  5.000000000000000e-01
+Node: 11
+  2.447643130510998e+00
+ -2.570845179719078e-01
+ -1.342412383818372e-01
+  3.000000000000000e-01
+Node: 12
+  2.711081252270924e+00
+ -4.501526348728000e-01
+ -2.798828374798183e-01
+  3.000000000000000e-01
+Node: 13
+  2.974352619308820e+00
+ -6.419436940272879e-01
+ -4.174463020710795e-01
+  3.000000000000000e-01
+Node: 14
+  3.218437907900458e+00
+ -8.074905606301290e-01
+ -5.115771921019351e-01
+  3.000000000000000e-01
+Node: 15
+  3.017897526101733e-03
+  6.726043232147080e-02
+  1.747255010683442e-01
+  1.800000000000000e-01
+Node: 16
+  4.133180274415295e-01
+  1.020102945909715e-01
+  2.319094597468164e-01
+  1.800000000000000e-01
+Node: 17
+  8.795172184976472e-01
+  1.149448459481597e-01
+  2.274915119711656e-01
+  1.800000000000000e-01
+Node: 18
+  1.324185845280540e+00
+  1.128968096159903e-01
+  2.275938907989292e-01
+  1.800000000000000e-01
+Node: 19
+  1.776094753602661e+00
+  1.162543894279857e-01
+  2.159050795679053e-01
+  1.800000000000000e-01
+Node: 20
+  2.220458350027672e+00
+  1.128685896957036e-01
+  2.197708812407930e-01
+  1.800000000000000e-01
+Node: 21
+  2.665377659401191e+00
+  1.139402738887889e-01
+  2.110713760079689e-01
+  1.800000000000000e-01
+Node: 22
+  3.109037245293125e+00
+  1.134024246980764e-01
+  2.245317429568045e-01
+  1.800000000000000e-01
+Node: 23
+  3.554032957525765e+00
+  1.111083384484419e-01
+  2.170664886704722e-01
+  1.800000000000000e-01
+Node: 24
+  4.007873722959625e+00
+  9.455184174585338e-02
+  1.562665357800655e-01
+  1.800000000000000e-01
+Node: 25
+  3.650365824150211e-02
+ -2.443646517760476e-01
+ -2.484677767585793e-01
+  1.600000000000000e-01
+Node: 26
+  4.444444444444444e-01
+ -2.000000000000000e-01
+ -2.000000000000000e-01
+  1.600000000000000e-01
+Node: 27
+  8.888888888888888e-01
+ -2.000000000000000e-01
+ -2.000000000000000e-01
+  1.600000000000000e-01
+Node: 28
+  1.333333333333333e+00
+ -2.000000000000000e-01
+ -2.000000000000000e-01
+  1.600000000000000e-01
+Node: 29
+  1.777777777777778e+00
+ -2.000000000000000e-01
+ -2.000000000000000e-01
+  1.600000000000000e-01
+Node: 30
+  2.222222222222222e+00
+ -2.000000000000000e-01
+ -2.000000000000000e-01
+  1.600000000000000e-01
+Node: 31
+  2.666666666666667e+00
+ -2.000000000000000e-01
+ -2.000000000000000e-01
+  1.600000000000000e-01
+Node: 32
+  3.119773532806408e+00
+ -1.739822778795015e-01
+ -1.418776640205003e-01
+  1.600000000000000e-01
+Node: 33
+  3.559610278792930e+00
+ -1.809736986882864e-01
+ -1.544218854266600e-01
+  1.600000000000000e-01
+Node: 34
+  4.005046501495423e+00
+ -1.726020482287798e-01
+ -2.188070821305510e-01
+  1.600000000000000e-01
+Node: 35
+  2.593065320266171e+00
+ -3.636453436630986e-01
+ -2.782545705182799e-01
+  1.200000000000000e-01
+Node: 36
+  2.864977251430427e+00
+ -5.788448713763134e-01
+ -4.093331980088444e-01
+  1.200000000000000e-01
+Node: 37
+  3.162539960993468e+00
+ -7.731751141114022e-01
+ -5.689115558349389e-01
+  1.200000000000000e-01
+Node: 38
+  2.109848842979773e+00
+  3.719079207098927e-02
+  1.119288096759290e-01
+  1.200000000000000e-01
+Node: 39
+  2.443602932356886e+00
+ -4.187280528600715e-02
+  7.952539783952647e-03
+  1.200000000000000e-01
+Node: 40
+  2.777357021733999e+00
+ -1.209364026430036e-01
+ -9.602373010802370e-02
+  1.200000000000000e-01
+Node: 41
+  1.188774765516805e+00
+ -1.317557143317290e-01
+  2.713028727140580e-01
+  1.000000000000000e-01
+Node: 42
+  1.551693950482933e+00
+ -1.544385131235169e-01
+  3.150434946628239e-01
+  1.000000000000000e-01
+Node: 43
+  1.149899874923449e+00
+ -9.822446159056160e-02
+ -4.870183811724769e-01
+  1.000000000000000e-02
+Node: 44
+  1.142023040483053e+00
+  1.038332976044075e-01
+ -3.725593905614107e-01
+  1.000000000000000e-02
+Node: 45
+  1.133758005562625e+00
+  2.852475311665115e-01
+ -1.565198362655622e-01
+  1.000000000000000e-02
+Node: 46
+  1.139733192538984e+00
+  3.526427305482840e-01
+  6.783031899931936e-02
+  1.000000000000000e-02
+Node: 47
+  1.135575496303638e+00
+  3.729293473070320e-01
+  3.129020572927896e-01
+  1.000000000000000e-02
+Node: 48
+  1.145027536689751e+00
+  2.476288707625080e-01
+  4.783048734333570e-01
+  1.000000000000000e-02
+Node: 49
+  1.155765499702990e+00
+ -8.940822592192652e-03
+  5.466605040604726e-01
+  1.000000000000000e-02
+Node: 50
+  1.151397872884108e+00
+ -2.386179401262818e-01
+  4.991814735148105e-01
+  1.000000000000000e-02
+Node: 51
+  1.170126401711106e+00
+ -3.978633230645265e-01
+  3.547048653571901e-01
+  1.000000000000000e-02
+Node: 52
+  1.198946099488208e+00
+ -5.042422191675737e-01
+  1.075292090735259e-01
+  1.000000000000000e-02
+Node: 53
+  1.183093133189083e+00
+ -5.097951359581457e-01
+ -1.799070828179922e-01
+  1.000000000000000e-02
+Node: 54
+  1.188338855899369e+00
+ -3.442974454082276e-01
+ -4.464940574422623e-01
+  1.000000000000000e-02
+Node: 55
+  2.606895397793692e+00
+ -1.950598675435381e-01
+ -5.361193420133061e-01
+  1.000000000000000e-02
+Node: 56
+  2.651902252839656e+00
+  2.267963645231352e-02
+ -4.467891552329343e-01
+  1.000000000000000e-02
+Node: 57
+  2.708886412730180e+00
+  1.964262699177105e-01
+ -2.629825160572929e-01
+  1.000000000000000e-02
+Node: 58
+  2.724087185465105e+00
+  4.002766604185694e-01
+ -1.698150657838519e-01
+  1.000000000000000e-02
+Node: 59
+  2.762649172380893e+00
+  4.734943912484497e-01
+  1.950103855185695e-02
+  1.000000000000000e-02
+Node: 60
+  2.761204225191120e+00
+  4.531602622637320e-01
+  2.407676855854297e-01
+  1.000000000000000e-02
+Node: 61
+  2.732505873421819e+00
+  2.909626972902289e-01
+  4.507066538115742e-01
+  1.000000000000000e-02
+Node: 62
+  2.656477291205181e+00
+ -9.045587239960982e-03
+  5.146054159844166e-01
+  1.000000000000000e-02
+Node: 63
+  2.617549174048286e+00
+ -2.682754820764324e-01
+  3.758702852189720e-01
+  1.000000000000000e-02
+Node: 64
+  2.564687839624030e+00
+ -4.493650306903538e-01
+  1.135176760617449e-01
+  1.000000000000000e-02
+Node: 65
+  2.539825917415548e+00
+ -6.284575422920684e-01
+ -8.927549417402995e-02
+  1.000000000000000e-02
+Node: 66
+  2.520444076789123e+00
+ -6.730375017164026e-01
+ -3.042201528516072e-01
+  1.000000000000000e-02
+Node: 67
+  2.532117137196638e+00
+ -6.244798860718002e-01
+ -4.486257837097265e-01
+  1.000000000000000e-02
+Node: 68
+  2.555646992814593e+00
+ -4.359756419261278e-01
+ -5.458579284260732e-01
+  1.000000000000000e-02
+!#nodeset datapoints
+Define node template: node2
+Shape. Dimension=0
+#Fields=3
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
+ x. #Values=1 (value)
+ y. #Values=1 (value)
+ z. #Values=1 (value)
+2) marker_name, field, string, #Components=1
+ 1. #Values=1 (value)
+3) radius, field, rectangular cartesian, real, #Components=1
+ 1. #Values=1 (value)
+Node template: node2
+Node: 69
+  3.000000000000000e+00
+  0.000000000000000e+00
+  7.000000000000000e-01
+ orientation
+ 0.01
+Node: 70
+  1.599724956533351e+00
+  3.788960603141545e-03
+  4.423695723249146e-03
+ "landmark 2"
+ 0.01
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Define element template: element1
+Shape. Dimension=1, line
+#Scale factor sets=0
+#Nodes=2
+#Fields=2
+1) coordinates, coordinate, rectangular cartesian, real, #Components=3
+ x. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+ y. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+ z. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+2) radius, field, rectangular cartesian, real, #Components=1
+ 1. l.Lagrange, no modify, standard node based.
+  #Nodes=2
+  1. #Values=1
+   Value labels: value
+  2. #Values=1
+   Value labels: value
+Element template: element1
+Element: 1
+ Nodes:
+ 1 2
+Element: 2
+ Nodes:
+ 2 3
+Element: 3
+ Nodes:
+ 3 4
+Element: 4
+ Nodes:
+ 4 5
+Element: 5
+ Nodes:
+ 5 6
+Element: 6
+ Nodes:
+ 6 7
+Element: 7
+ Nodes:
+ 7 8
+Element: 8
+ Nodes:
+ 8 9
+Element: 9
+ Nodes:
+ 9 10
+Element: 10
+ Nodes:
+ 6 11
+Element: 11
+ Nodes:
+ 11 12
+Element: 12
+ Nodes:
+ 12 13
+Element: 13
+ Nodes:
+ 13 14
+Element: 14
+ Nodes:
+ 15 16
+Element: 15
+ Nodes:
+ 16 17
+Element: 16
+ Nodes:
+ 17 18
+Element: 17
+ Nodes:
+ 18 19
+Element: 18
+ Nodes:
+ 19 20
+Element: 19
+ Nodes:
+ 20 21
+Element: 20
+ Nodes:
+ 21 22
+Element: 21
+ Nodes:
+ 22 23
+Element: 22
+ Nodes:
+ 23 24
+Element: 23
+ Nodes:
+ 25 26
+Element: 24
+ Nodes:
+ 26 27
+Element: 25
+ Nodes:
+ 27 28
+Element: 26
+ Nodes:
+ 28 29
+Element: 27
+ Nodes:
+ 29 30
+Element: 28
+ Nodes:
+ 30 31
+Element: 29
+ Nodes:
+ 31 32
+Element: 30
+ Nodes:
+ 32 33
+Element: 31
+ Nodes:
+ 33 34
+Element: 32
+ Nodes:
+ 30 35
+Element: 33
+ Nodes:
+ 35 36
+Element: 34
+ Nodes:
+ 36 37
+Element: 35
+ Nodes:
+ 19 38
+Element: 36
+ Nodes:
+ 38 39
+Element: 37
+ Nodes:
+ 39 40
+Element: 38
+ Nodes:
+ 40 32
+Element: 39
+ Nodes:
+ 41 42
+Element: 40
+ Nodes:
+ 43 44
+Element: 41
+ Nodes:
+ 44 45
+Element: 42
+ Nodes:
+ 45 46
+Element: 43
+ Nodes:
+ 46 47
+Element: 44
+ Nodes:
+ 47 48
+Element: 45
+ Nodes:
+ 48 49
+Element: 46
+ Nodes:
+ 49 50
+Element: 47
+ Nodes:
+ 50 51
+Element: 48
+ Nodes:
+ 51 52
+Element: 49
+ Nodes:
+ 52 53
+Element: 50
+ Nodes:
+ 53 54
+Element: 51
+ Nodes:
+ 54 43
+Element: 52
+ Nodes:
+ 55 56
+Element: 53
+ Nodes:
+ 56 57
+Element: 54
+ Nodes:
+ 57 58
+Element: 55
+ Nodes:
+ 58 59
+Element: 56
+ Nodes:
+ 59 60
+Element: 57
+ Nodes:
+ 60 61
+Element: 58
+ Nodes:
+ 61 62
+Element: 59
+ Nodes:
+ 62 63
+Element: 60
+ Nodes:
+ 63 64
+Element: 61
+ Nodes:
+ 64 65
+Element: 62
+ Nodes:
+ 65 66
+Element: 63
+ Nodes:
+ 66 67
+Element: 64
+ Nodes:
+ 67 68
+Element: 65
+ Nodes:
+ 68 55
+Group name: 00001
+!#nodeset nodes
+Node group:
+43..54
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+40..51
+Group name: 00002
+!#nodeset nodes
+Node group:
+55..68
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+52..65
+Group name: Epineurium
+!#nodeset nodes
+Node group:
+43..68
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+40..65
+Group name: Fascicle
+!#nodeset nodes
+Node group:
+15..40
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+14..38
+Group name: http://purl.obolibrary.org/obo/UBERON_0000124
+!#nodeset nodes
+Node group:
+43..68
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+40..65
+Group name: http://purl.obolibrary.org/obo/UBERON_0035020
+!#nodeset nodes
+Node group:
+1..10
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+1..9
+Group name: http://uri.interlex.org/base/ilx_0738426
+!#nodeset nodes
+Node group:
+15..40
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+14..38
+Group name: left A branch 2
+!#nodeset nodes
+Node group:
+6,11..14
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+10..13
+Group name: left vagus X nerve trunk
+!#nodeset nodes
+Node group:
+1..10
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+1..9
+Group name: marker
+!#nodeset datapoints
+Node group:
+69..70
+Group name: unknown
+!#nodeset nodes
+Node group:
+41..42
+!#mesh mesh1d, dimension=1, nodeset=nodes
+Element group:
+39
